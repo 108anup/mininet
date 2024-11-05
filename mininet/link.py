@@ -357,7 +357,7 @@ class TCIntf( Intf ):
         # Optimization: return if nothing else to configure
         # Question: what happens if we want to reset things?
         if ( bw is None and not delay and not loss
-             and max_queue_size is None ):
+             and max_queue_size is None and bw_netem is None ):
             return None
 
         # Clear existing configuration
@@ -519,7 +519,7 @@ class Link( object ):
         return "(%s %s)" % ( self.intf1.status(), self.intf2.status() )
 
     def __str__( self ):
-        return '%s<->%s' % ( self.intf1, self.intf2 )
+        return '%s<->%s (%s) (%s)' % ( self.intf1, self.intf2, self.intf1.params, self.intf2.params )
 
 
 class OVSIntf( Intf ):

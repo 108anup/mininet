@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 
 from functools import partial
@@ -7,12 +9,12 @@ from mininet.net import Mininet
 from mininet.node import Node, UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
 from mininet.log import lg, info, setLogLevel
-from mininet.util import irange, quietRun
+from mininet.util import ensureRoot, irange, quietRun
 from mininet.link import TCLink
 
 flush = sys.stdout.flush
 
-DURATION = 60
+DURATION = 10
 
 
 class ParkingLotTopo(Topo):
@@ -51,13 +53,14 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, cca: str):
     )
     net.start()
 
-    # for h in range(hops+1):
-    #     sender = net.get(f'hs{h}')
-    #     receiver = net.get(f'hr{h}')
-    #     assert isinstance(sender, Node)
-    #     assert isinstance(receiver, Node)
-    #     receiver.sendCmd(f'iperf3 -s -p 5001 &')
-    #     sender.sendCmd(f'iperf3 -c {receiver.IP()} -p 5001 -t {DURATION} --congestion {cca}')
+    for h in range(hops+1):
+        sender = net.get(f'hs{h}')
+        receiver = net.get(f'hr{h}')
+        assert isinstance(sender, Node)
+        assert isinstance(receiver, Node)
+        logfile = f'/tmp/[s={sender}][r={receiver}].json'
+        receiver.sendCmd(f'iperf3 -s -p 5001 > /dev/null')
+        sender.sendCmd(f'iperf3 -c {receiver.IP()} -p 5001 -t {DURATION} --congestion {cca} --json --logfile {logfile}')
 
     # TODO: log queue buildup
     CLI(net)
@@ -66,6 +69,7 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, cca: str):
 
 
 if __name__ == '__main__':
+    # TODO: Add queue size
     hops = 2
     bw_mbps = 10
     delay_ms = 10
