@@ -290,19 +290,20 @@ class TCIntf( Intf ):
 
     @staticmethod
     def delayCmds( parent, delay=None, jitter=None,
-                   loss=None, max_queue_size=None ):
+                   loss=None, max_queue_size=None, bw_mbps=None ):
         "Internal method: return tc commands for delay and loss"
         cmds = []
         if loss and ( loss < 0 or loss > 100 ):
             error( 'Bad loss percentage', loss, '%%\n' )
         else:
             # Delay/jitter/loss/max queue size
-            netemargs = '%s%s%s%s' % (
+            # https://srtlab.github.io/srt-cookbook/how-to-articles/using-netem-to-emulate-networks.html
+            netemargs = '%s%s%s%s%s' % (
                 'delay %s ' % delay if delay is not None else '',
                 '%s ' % jitter if jitter is not None else '',
                 'loss %.5f ' % loss if (loss is not None and loss > 0) else '',
-                'limit %d' % max_queue_size if max_queue_size is not None
-                else '' )
+                'limit %d' % max_queue_size if max_queue_size is not None else '',
+                'rate %fmbit' % bw_mbps if bw_mbps is not None else '' )
             if netemargs:
                 cmds = [ '%s qdisc add dev %s ' + parent +
                          ' handle 10: netem ' +
@@ -321,7 +322,7 @@ class TCIntf( Intf ):
                 gro=False, txo=True, rxo=True,
                 speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False,
-                max_queue_size=None, **params ):
+                max_queue_size=None, bw_netem=None, **params ):
         """Configure the port and set its properties.
            bw: bandwidth in b/s (e.g. '10m')
            delay: transmit delay (e.g. '1ms' )
@@ -378,11 +379,12 @@ class TCIntf( Intf ):
         delaycmds, parent = self.delayCmds( delay=delay, jitter=jitter,
                                             loss=loss,
                                             max_queue_size=max_queue_size,
-                                            parent=parent )
+                                            parent=parent, bw_mbps=bw_netem )
         cmds += delaycmds
 
         # Ugly but functional: display configuration info
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +
+                  ( [ '%.2fMbit' % bw_netem ] if bw_netem is not None else [] ) +
                   ( [ '%s delay' % delay ] if delay is not None else [] ) +
                   ( [ '%s jitter' % jitter ] if jitter is not None else [] ) +
                   ( ['%.5f%% loss' % loss ] if loss is not None else [] ) +
