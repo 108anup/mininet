@@ -16,7 +16,7 @@ from mininet.link import TCLink
 
 flush = sys.stdout.flush
 
-DURATION = 60
+DURATION = 5
 LOGFILE_PATH = '/home/mininet/P/logs/'
 
 
@@ -75,6 +75,10 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, cca: str):
 
     for sender in senders:
         sender.waitOutput()
+    for reciever in receivers:
+        # reciever.sendCmd('killall iperf3')
+        reciever.sendInt()
+        reciever.waitOutput()
     info('*** iperf3 test completed\n')
 
     throughputs = []
@@ -91,7 +95,8 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, cca: str):
     # TODO: log queue buildup
     # CLI(net)
     ratio = throughputs[-1]/throughputs[0]
-    info(f"*** {hops}, {ratio}")
+    info(f"*** Hops={hops}, Ratio={ratio:.2f}\n")
+
     net.stop()
     return ratio
 
@@ -103,8 +108,8 @@ if __name__ == '__main__':
     delay_ms = 10
     cca = 'vegas'
     setLogLevel('info')
-    data = []
-    for hops in [2, 3, 4, 5]:
-        ratio = parking_lot_test(hops, bw_mbps, delay_ms, cca)
-        data.append((hops, ratio))
-    info(data)
+    # data = []
+    # for hops in [2, 3, 4, 5]:
+    ratio = parking_lot_test(hops, bw_mbps, delay_ms, cca)
+    # data.append((hops, ratio))
+    # info(data)
