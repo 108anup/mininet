@@ -22,7 +22,7 @@ from mininet.link import TCLink
 
 flush = sys.stdout.flush
 
-INTER_POLL_TIME = 5e-3  # seconds
+INTER_POLL_TIME = 1e-1  # seconds
 DURATION = 60
 LIVELOG_ROOT = '/home/mininet/P/logs/'
 STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet'
@@ -57,21 +57,22 @@ class ParkingLotTopo(Topo):
             self.addLink(receivers[i], switches[i], delay=f"{delay_ms}ms")
 
 
+def get_livelog_name_path(sender: Node, receiver: Node) -> Tuple[str, str]:
+        lname = f'[s={sender}][r={receiver}].json'
+        llpath = os.path.join(LIVELOG_ROOT, lname)
+        return lname, llpath
+
+
 def run_iperf_test(
     net: Mininet,
     senders: List[Node],
     receivers: List[Node],
-    switches: List,
+    switches: List[OVSKernelSwitch],
     cca: str,
     experiment_path: str,
 ):
     assert len(senders) == len(receivers)
     n = len(senders)
-
-    def get_livelog_name_path(sender: Node, receiver: Node) -> Tuple[str, str]:
-        lname = f'[s={sender}][r={receiver}].json'
-        llpath = os.path.join(LIVELOG_ROOT, lname)
-        return lname, llpath
 
     info('*** Starting iperf3 test\n')
     for i in range(n):
@@ -88,20 +89,37 @@ def run_iperf_test(
             f" --congestion {cca} --json --logfile {llpath}"
         )
 
-    # Log all switches
-    switch_logfiles = [
-        os.path.join(LIVELOG_ROOT, f'[switch={s}].log') for s in switches
-    ]
-    for sl in switch_logfiles:
-        if os.path.exists(sl):
-            os.remove(sl)
+    # Log all but last switch
+    switch_logfiles = []
+    switch_logfile_handlers = []
+    for s in switches[:-1]:
+        sl = os.path.join(LIVELOG_ROOT, f'[switch={s}].csv')
+        switch_logfiles.append(sl)
+        slf = open(sl, 'w')
+        switch_logfile_handlers.append(slf)
+        slf.write(f"time,bytes,packets,drops,overlimits,requeues,backlog,qlen\n")
 
     start = time.time()
     while time.time() - start < DURATION:
-        for i, switch in enumerate(switches):
+        for i, switch in enumerate(switches[:-1]):
             intf_name = net.linksBetween(net.switches[i], net.switches[i+1])[0].intf1.name
-            switch.sendCmd(f'tc -s qdisc show dev {intf_name} >> {switch_logfiles[i]}')
+            stats: str = switch.cmd(f'tc -s -j qdisc show dev {intf_name}')  # type: ignore
+            jdict = json.loads(stats)
+            record = [
+                time.time() - start,
+                jdict[0]['bytes'],
+                jdict[0]['packets'],
+                jdict[0]['drops'],
+                jdict[0]['overlimits'],
+                jdict[0]['requeues'],
+                jdict[0]['backlog'],
+                jdict[0]['qlen'],
+            ]
+            switch_logfile_handlers[i].write(','.join(map(str, record)) + '\n')
         time.sleep(INTER_POLL_TIME)
+
+    for slf in switch_logfile_handlers:
+        slf.close()
 
     # Wait for all iperf3 to finish
     for sender in senders:
@@ -111,7 +129,7 @@ def run_iperf_test(
         reciever.sendInt()
         reciever.waitOutput()
 
-    # Move all logs to storage
+    # Copy all logs to storage
     os.makedirs(experiment_path, exist_ok=True)
 
     for i in range(n):
@@ -151,17 +169,14 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
 
     run_iperf_test(net, senders, receivers, switches, cca, experiment_path)
 
-
+    # Quick printing of result
     throughputs = []
     for h in range(hops+1):
         sender = senders[h]
         receiver = receivers[h]
-        livelog_name = f'[s={sender}][r={receiver}].json'
-        livelog_path = os.path.join(LIVELOG_ROOT, livelog_name)
-        log_path = os.path.join(experiment_path, livelog_name)
-        shutil.copy(livelog_path, log_path)
+        lname, llpath = get_livelog_name_path(sender, receiver)
 
-        with open(livelog_path, 'r') as f:
+        with open(llpath, 'r') as f:
             data = json.load(f)
             throughput = float(data["end"]["sum_received"]["bits_per_second"]) / 1e6
             sender = senders[h]
@@ -179,15 +194,16 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
 if __name__ == '__main__':
     hops = 3
     bw_mbps = 100
-    delay_ms = 50  # one way
+    delay_ms = 5  # one way
     cca = 'reno'
     queue_size_bdp = 1
 
+    INTER_POLL_TIME = max(INTER_POLL_TIME, delay_ms / 1e3)
     setLogLevel('info')
 
     records = []
-    for hops in [3]:
-    # for hops in range(9, 11):
+    # for hops in [3]:
+    for hops in range(2, 11):
         ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
         records.append({
             'hops': hops,
