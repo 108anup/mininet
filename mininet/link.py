@@ -302,8 +302,8 @@ class TCIntf( Intf ):
                 'delay %s ' % delay if delay is not None else '',
                 '%s ' % jitter if jitter is not None else '',
                 'loss %.5f ' % loss if (loss is not None and loss > 0) else '',
-                'limit %d' % max_queue_size if max_queue_size is not None else '',
-                'rate %fmbit' % bw_mbps if bw_mbps is not None else '' )
+                'limit %d ' % max_queue_size if max_queue_size is not None else '',
+                'rate %fmbit ' % bw_mbps if bw_mbps is not None else '' )
             if netemargs:
                 cmds = [ '%s qdisc add dev %s ' + parent +
                          ' handle 10: netem ' +
@@ -385,6 +385,7 @@ class TCIntf( Intf ):
         # Ugly but functional: display configuration info
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +
                   ( [ '%.2fMbit' % bw_netem ] if bw_netem is not None else [] ) +
+                  ( [ '%d packets' % max_queue_size ] if max_queue_size is not None else [] ) +
                   ( [ '%s delay' % delay ] if delay is not None else [] ) +
                   ( [ '%s jitter' % jitter ] if jitter is not None else [] ) +
                   ( ['%.5f%% loss' % loss ] if loss is not None else [] ) +
