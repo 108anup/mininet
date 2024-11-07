@@ -165,7 +165,7 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
     receivers: List[Node] = [net.get(f'hr{h}') for h in range(hops+1)]  # type: ignore
     switches: List[OVSKernelSwitch] = [net.get(f's{s}') for s in range(hops+1)]  # type: ignore
     experiment_dir = f'[hops={hops}][bw_mbps={bw_mbps}][delay_ms={delay_ms}][queue_size_bdp={queue_size_bdp}][cca={cca}]'
-    experiment_path = os.path.join(STORAGE_ROOT, "parking_lot", experiment_dir)
+    experiment_path = os.path.join(STORAGE_ROOT, "parking_lot", f"[cca={cca}]", experiment_dir)
 
     run_iperf_test(net, senders, receivers, switches, cca, experiment_path)
 
@@ -193,8 +193,8 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
 
 if __name__ == '__main__':
     hops = 3
-    bw_mbps = 100
-    delay_ms = 5  # one way
+    bw_mbps = 400
+    delay_ms = 1  # one way
     cca = 'reno'
     queue_size_bdp = 1
 

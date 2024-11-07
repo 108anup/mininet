@@ -1,3 +1,4 @@
+import ast
 import os
 import matplotlib.pyplot as plt
 from typing import Any, Callable, Literal
@@ -30,6 +31,26 @@ def plot_df(df, ykey, fpath, xkey='time',
     # return fig, ax
 
 
+def parse_literal(element: str):
+    """Converts string to literal if possible, else returns the string
+
+    Examples
+    --------
+    >>> parse_literal("1.0")
+    1.0
+    >>> parse_literal("1")
+    1
+    >>> type(parse_literal("1"))
+    <class 'int'>
+    >>> type(parse_literal("1.0"))
+    <class 'float'>
+    """
+
+    try:
+        return ast.literal_eval(element)
+    except ValueError:
+        return element
+
 def parse_tag(tag):
     ret = {}
     """
@@ -38,7 +59,7 @@ def parse_tag(tag):
     for kv in tag.split(']['):
         kv = kv.replace('[', '').replace(']', '')
         key, value = kv.split('=')
-        ret[key] = value
+        ret[key] = parse_literal(value)
     return ret
 
 

@@ -8,6 +8,20 @@ import matplotlib.pyplot as plt
 from common import parse_tag, plot_df, plot_multi_exp, try_except_wrapper
 
 
+def get_steady_state_bps(df: pd.DataFrame):
+    """
+    Intervals are roughly 1 seconds long.
+    df has one row for each interval.
+
+    Assuming experiment is 60 seconds long.
+    We want average throughput in intervals 30 to 40.
+    """
+
+    df["data_bits"] = df["bits_per_second"] * df["seconds"]
+    fdf = df[(df['start'] >= 25) & (df['end'] <= 50)]
+    return fdf["data_bits"].sum() / fdf["seconds"].sum()
+
+
 def parse_jdict(fpath):
     with open(fpath, 'r') as f:
         try:
@@ -78,6 +92,44 @@ def plot_single_exp(input_file, output_dir):
     print(summary)
 
 
+def summarize_parking_lot(input_dir, output_dir):
+    # find all experiment directories
+    # parent of all json files are experiment directories
+
+    exp_dirs = {}
+    for root, _, files in os.walk(input_dir):
+        if any([f.endswith('.json') for f in files]):
+            exp_dirs[root] = sorted([f for f in files if f.endswith('.json')])
+
+    master_records = []
+    for exp, files in exp_dirs.items():
+        records = []
+        tags_exp = parse_tag(os.path.basename(exp))
+        for file in files:
+            fpath = os.path.join(exp, file)
+            record = {}
+            summary = parse_iperf_summary(fpath)
+            record.update(summary)
+            df = parse_iperf_timeseries(fpath)
+            ss_bps = get_steady_state_bps(df)
+            record['ss_bps'] = ss_bps
+            record['ss_mbps'] = ss_bps / 1e6
+            tags_flow = parse_tag(file.removesuffix('.json'))
+            record.update(tags_flow)
+            records.append(record)
+
+        rdf = pd.DataFrame(records).sort_values(by='s')
+        ratio = rdf['ss_mbps'].iloc[-1] / rdf['ss_mbps'].iloc[0]
+        master_record = {
+            "ratio": ratio,
+        }
+        master_record.update(tags_exp)
+        master_records.append(master_record)
+
+    mdf = pd.DataFrame(master_records).sort_values(by='hops')
+    print(mdf)
+
+
 # def plot_parking_lot(input_dir, output_dir):
 #     input_files = []
 #     for root, _, files in os.walk(input_dir):
@@ -134,9 +186,11 @@ def main():
     args = parser.parse_args()
 
     if(os.path.isdir(args.input)):
-        plot_multi_exp(args.input, args.output, '.json', plot_single_exp)
-        # if args.parking_lot:
-        #     plot_parking_lot(args.input, args.output)
+        if args.parking_lot:
+            summarize_parking_lot(args.input, args.output)
+            # plot_parking_lot(args.input, args.output)
+        else:
+            plot_multi_exp(args.input, args.output, '.json', plot_single_exp)
     else:
         plot_single_exp(args.input, args.output)
 
