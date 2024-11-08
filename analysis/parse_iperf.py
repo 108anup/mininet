@@ -14,11 +14,11 @@ def get_steady_state_bps(df: pd.DataFrame):
     df has one row for each interval.
 
     Assuming experiment is 60 seconds long.
-    We want average throughput in intervals 30 to 40.
+    We want average throughput in intervals 25 to 50.
     """
 
     df["data_bits"] = df["bits_per_second"] * df["seconds"]
-    fdf = df[(df['start'] >= 25) & (df['end'] <= 50)]
+    fdf = df[(df['start'] >= 25) & (df['start'] <= 50)]
     return fdf["data_bits"].sum() / fdf["seconds"].sum()
 
 
