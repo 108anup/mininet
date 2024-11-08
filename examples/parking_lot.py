@@ -1,33 +1,28 @@
 #!/usr/bin/env python
 
-from io import FileIO, TextIOWrapper
 import json
-from math import log
 import math
 import os
 import shutil
 import sys
 import time
-from typing import List, Tuple
 from dataclasses import dataclass
+from typing import List, Tuple
+
 import pandas as pd
 
-from functools import partial
-
-from mininet.cli import CLI
-from mininet.net import Mininet
-from mininet.node import Node, UserSwitch, OVSKernelSwitch, Controller
-from mininet.topo import Topo
-from mininet.log import lg, info, setLogLevel
-from mininet.util import ensureRoot, irange, quietRun
 from mininet.link import TCLink
+from mininet.log import info, setLogLevel
+from mininet.net import Mininet
+from mininet.node import Controller, Node, OVSKernelSwitch
+from mininet.topo import Topo
 
 flush = sys.stdout.flush
 
 INTER_POLL_TIME = 1e-1  # seconds
-DURATION = 60
+DURATION = 120
 LIVELOG_ROOT = '/home/mininet/P/logs/'
-STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/redo'
+STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/full'
 PKT_SIZE_BYTES = 1500
 TC_RECORD_HEADER = f"time,bytes,packets,drops,overlimits,requeues,backlog,qlen\n"
 GENERICCC_PATH = '/home/mininet/P/genericCC'
@@ -219,7 +214,7 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
     receivers: List[Node] = [net.get(f'hr{h}') for h in range(hops+1)]  # type: ignore
     switches: List[OVSKernelSwitch] = [net.get(f's{s}') for s in range(hops+1)]  # type: ignore
     experiment_dir = f'[hops={hops}][bw_mbps={bw_mbps}][delay_ms={delay_ms}][queue_size_bdp={queue_size_bdp}][cca={cca}]'
-    experiment_path = os.path.join(STORAGE_ROOT, "parking_lot", f"[cca={cca}]", experiment_dir)
+    experiment_path = os.path.join(STORAGE_ROOT, "parking_lot", f"[bw_mbps={bw_mbps}][delay_ms={delay_ms}][queue_size_bdp={queue_size_bdp}][cca={cca}]", experiment_dir)
 
     # CLI(net)
     run_iperf_test(net, senders, receivers, switches, cca, experiment_path)
@@ -250,9 +245,9 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
 
 if __name__ == '__main__':
     hops = 3
-    bw_mbps = 500
-    delay_ms = 1  # one way
-    cca = 'genericcc_markovian'
+    bw_mbps = 96
+    delay_ms = 5  # one way
+    cca = 'cubic'
     queue_size_bdp = 1
 
     INTER_POLL_TIME = max(INTER_POLL_TIME, delay_ms / 1e3)
@@ -260,12 +255,14 @@ if __name__ == '__main__':
 
     records = []
     # for hops in [3]:
-    for hops in range(2, 11):
-        ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
-        records.append({
-            'hops': hops,
-            'ratio': ratio,
-        })
-    df = pd.DataFrame(records)
-    info(df)
-    info("\n")
+    for cca in ["reno", "cubic", "genericcc_markovian", "vegas"]:
+        for hops in range(2, 11):
+            ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
+            records.append({
+                'hops': hops,
+                'ratio': ratio,
+            })
+        df = pd.DataFrame(records)
+        info(f"{cca}\n")
+        info(df)
+        info("\n")
