@@ -30,6 +30,7 @@ LIVELOG_ROOT = '/home/mininet/P/logs/'
 STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/redo'
 PKT_SIZE_BYTES = 1500
 TC_RECORD_HEADER = f"time,bytes,packets,drops,overlimits,requeues,backlog,qlen\n"
+GENERICCC_PATH = '/home/mininet/P/genericcc'
 
 
 def get_queue_size_pkts(bw_mbps: float, delay_ms: float, queue_size_bdp: float) -> int:
@@ -103,11 +104,27 @@ def run_iperf_test(
         if os.path.exists(llpath):
             os.remove(llpath)
 
-        receiver.sendCmd(f'iperf3 -s -p 5001 > /dev/null')
-        sender.sendCmd(
-            f"iperf3 -c {receiver.IP()} -p 5001 -t {DURATION}"
-            f" --congestion {cca} --json --logfile {llpath}"
-        )
+        if "genericcc_" in cca:
+            short_cca = cca.removeprefix('genericcc_')
+            cc_params = ""
+            if short_cca == 'markovian':
+                "delta_conf=do_ss:auto:0.5"
+
+            receiver.sendCmd(f'{GENERICCC_PATH}/receiver 5001 &')
+            sender.sendCmd(
+                f"{GENERICCC_PATH}/sender serverip={receiver.IP()} serverport=5001 "
+                f"offduration=0 onduration={int(DURATION*1e3)} "
+                f"cctype={short_cca} "
+                f"{cc_params} "
+                f"traffic_params=deterministic,num_cycles=1 "
+            )
+
+        else:
+            receiver.sendCmd(f'iperf3 -s -p 5001 > /dev/null')
+            sender.sendCmd(
+                f"iperf3 -c {receiver.IP()} -p 5001 -t {DURATION}"
+                f" --congestion {cca} --json --logfile {llpath}"
+            )
 
     @dataclass
     class TcLogNode:
@@ -231,15 +248,15 @@ if __name__ == '__main__':
     hops = 3
     bw_mbps = 500
     delay_ms = 1  # one way
-    cca = 'vegas'
+    cca = 'genericcc_markovian'
     queue_size_bdp = 1
 
     INTER_POLL_TIME = max(INTER_POLL_TIME, delay_ms / 1e3)
     setLogLevel('info')
 
     records = []
-    # for hops in [3]:
-    for hops in range(2, 11):
+    for hops in [3]:
+    # for hops in range(2, 11):
         ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
         records.append({
             'hops': hops,
