@@ -30,7 +30,7 @@ LIVELOG_ROOT = '/home/mininet/P/logs/'
 STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/redo'
 PKT_SIZE_BYTES = 1500
 TC_RECORD_HEADER = f"time,bytes,packets,drops,overlimits,requeues,backlog,qlen\n"
-GENERICCC_PATH = '/home/mininet/P/genericcc'
+GENERICCC_PATH = '/home/mininet/P/genericCC'
 
 
 def get_queue_size_pkts(bw_mbps: float, delay_ms: float, queue_size_bdp: float) -> int:
@@ -105,18 +105,19 @@ def run_iperf_test(
             os.remove(llpath)
 
         if "genericcc_" in cca:
-            short_cca = cca.removeprefix('genericcc_')
+            short_cca = cca.replace("genericcc_", "")
             cc_params = ""
             if short_cca == 'markovian':
-                "delta_conf=do_ss:auto:0.5"
+                cc_params = "delta_conf=do_ss:auto:0.5"
 
-            receiver.sendCmd(f'{GENERICCC_PATH}/receiver 5001 &')
+            receiver.sendCmd(f'{GENERICCC_PATH}/receiver 5001')
+            sender_log = os.path.join(LIVELOG_ROOT, f'[sender={sender}].txt')
             sender.sendCmd(
                 f"{GENERICCC_PATH}/sender serverip={receiver.IP()} serverport=5001 "
                 f"offduration=0 onduration={int(DURATION*1e3)} "
                 f"cctype={short_cca} "
                 f"{cc_params} "
-                f"traffic_params=deterministic,num_cycles=1 "
+                f"traffic_params=deterministic,num_cycles=1 > {sender_log} 2>&1 "
             )
 
         else:
@@ -182,13 +183,14 @@ def run_iperf_test(
     # Copy all logs to storage
     os.makedirs(experiment_path, exist_ok=True)
 
-    # iperf json logs (1s)
-    for i in range(n):
-        sender = senders[i]
-        receiver = receivers[i]
-        lname, llpath = get_livelog_name_path(sender, receiver)
-        slpath = os.path.join(experiment_path, lname)
-        shutil.copy(llpath, slpath)
+    if "genericcc_" not in cca:
+        # iperf json logs (1s)
+        for i in range(n):
+            sender = senders[i]
+            receiver = receivers[i]
+            lname, llpath = get_livelog_name_path(sender, receiver)
+            slpath = os.path.join(experiment_path, lname)
+            shutil.copy(llpath, slpath)
 
     # TC logs (100ms)
     for loggable in loggables:
@@ -223,22 +225,24 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
     run_iperf_test(net, senders, receivers, switches, cca, experiment_path)
 
     # Quick printing of result
-    throughputs = []
-    for h in range(hops+1):
-        sender = senders[h]
-        receiver = receivers[h]
-        lname, llpath = get_livelog_name_path(sender, receiver)
-
-        with open(llpath, 'r') as f:
-            data = json.load(f)
-            throughput = float(data["end"]["sum_received"]["bits_per_second"]) / 1e6
+    ratio = 1.0
+    if "genericcc_" not in cca:
+        throughputs = []
+        for h in range(hops+1):
             sender = senders[h]
             receiver = receivers[h]
-            info(f'*** {sender} -> {receiver} throughput: {throughput:.6f} Mbps\n')
-            throughputs.append(throughput)
+            lname, llpath = get_livelog_name_path(sender, receiver)
 
-    ratio = throughputs[-1]/throughputs[0]
-    info(f"*** Parking log experiment result: Hops={hops}, Ratio={ratio:.2f}\n")
+            with open(llpath, 'r') as f:
+                data = json.load(f)
+                throughput = float(data["end"]["sum_received"]["bits_per_second"]) / 1e6
+                sender = senders[h]
+                receiver = receivers[h]
+                info(f'*** {sender} -> {receiver} throughput: {throughput:.6f} Mbps\n')
+                throughputs.append(throughput)
+
+        ratio = throughputs[-1]/throughputs[0]
+        info(f"*** Parking log experiment result: Hops={hops}, Ratio={ratio:.2f}\n")
 
     net.stop()
     return ratio
@@ -255,8 +259,8 @@ if __name__ == '__main__':
     setLogLevel('info')
 
     records = []
-    for hops in [3]:
-    # for hops in range(2, 11):
+    # for hops in [3]:
+    for hops in range(2, 11):
         ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
         records.append({
             'hops': hops,
