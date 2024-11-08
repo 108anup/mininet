@@ -122,7 +122,7 @@ def summarize_parking_lot(input_dir, output_dir):
         master_record.update(tags_exp)
         master_records.append(master_record)
 
-    mdf = pd.DataFrame(master_records).sort_values(by='hops')
+    mdf = pd.DataFrame(master_records).sort_values(by=['cca', 'hops'])
     print(mdf)
 
 

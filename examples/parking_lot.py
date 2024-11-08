@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import argparse
 import json
 import math
 import os
@@ -20,9 +21,9 @@ from mininet.topo import Topo
 flush = sys.stdout.flush
 
 INTER_POLL_TIME = 1e-1  # seconds
-DURATION = 120
+DURATION = 60
 LIVELOG_ROOT = '/home/mininet/P/logs/'
-STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/full'
+STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/parking_lot'
 PKT_SIZE_BYTES = 1500
 TC_RECORD_HEADER = f"time,bytes,packets,drops,overlimits,requeues,backlog,qlen\n"
 GENERICCC_PATH = '/home/mininet/P/genericCC'
@@ -86,6 +87,7 @@ def run_iperf_test(
     switches: List[OVSKernelSwitch],
     cca: str,
     experiment_path: str,
+    rtprop: float,
 ):
     assert len(senders) == len(receivers)
     n = len(senders)
@@ -103,11 +105,14 @@ def run_iperf_test(
             short_cca = cca.replace("genericcc_", "")
             cc_params = ""
             if short_cca == 'markovian':
-                cc_params = "delta_conf=do_ss:auto:0.5"
+                # cc_params = "delta_conf=do_ss:auto:0.5"
+                cc_params = "delta_conf=do_ss:constant_delta:0.5"
 
             receiver.sendCmd(f'{GENERICCC_PATH}/receiver 5001')
             sender_log = os.path.join(LIVELOG_ROOT, f'[sender={sender}].txt')
+            sender.cmd(f"export MIN_RTT={rtprop}")
             sender.sendCmd(
+                f"MIN_RTT={rtprop} "
                 f"{GENERICCC_PATH}/sender serverip={receiver.IP()} serverport=5001 "
                 f"offduration=0 onduration={int(DURATION*1e3)} "
                 f"cctype={short_cca} "
@@ -214,10 +219,10 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
     receivers: List[Node] = [net.get(f'hr{h}') for h in range(hops+1)]  # type: ignore
     switches: List[OVSKernelSwitch] = [net.get(f's{s}') for s in range(hops+1)]  # type: ignore
     experiment_dir = f'[hops={hops}][bw_mbps={bw_mbps}][delay_ms={delay_ms}][queue_size_bdp={queue_size_bdp}][cca={cca}]'
-    experiment_path = os.path.join(STORAGE_ROOT, "parking_lot", f"[bw_mbps={bw_mbps}][delay_ms={delay_ms}][queue_size_bdp={queue_size_bdp}][cca={cca}]", experiment_dir)
+    experiment_path = os.path.join(STORAGE_ROOT, f"[bw_mbps={bw_mbps}][delay_ms={delay_ms}][queue_size_bdp={queue_size_bdp}][cca={cca}]", experiment_dir)
 
     # CLI(net)
-    run_iperf_test(net, senders, receivers, switches, cca, experiment_path)
+    run_iperf_test(net, senders, receivers, switches, cca, experiment_path, 2 * delay_ms)
 
     # Quick printing of result
     ratio = 1.0
@@ -243,10 +248,22 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
     return ratio
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-o', '--output', default=STORAGE_ROOT,
+        type=str, action='store',
+        help='path output dir')
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == '__main__':
+    args = parse_args()
+    STORAGE_ROOT = args.output
     hops = 3
-    bw_mbps = 96
-    delay_ms = 5  # one way
+    bw_mbps = 500
+    delay_ms = 1  # one way
     cca = 'cubic'
     queue_size_bdp = 1
 
@@ -255,8 +272,10 @@ if __name__ == '__main__':
 
     records = []
     # for hops in [3]:
-    for cca in ["reno", "cubic", "genericcc_markovian", "vegas"]:
-        for hops in range(2, 11):
+    # for cca in ["reno", "cubic", "genericcc_markovian", "vegas"]:
+    for cca in ["genericcc_markovian"]:
+        for hops in [5]:
+        # for hops in range(9, 11):
             ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
             records.append({
                 'hops': hops,
