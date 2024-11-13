@@ -27,7 +27,7 @@ FUNC_DICT = {
 }
 
 if __name__ == '__main__':
-    fpath = "/home/anupa/Projects/msr24/uec-experiments/imc/contracts/parking_lot/first/xratio-vs-hopcount.csv"
+    fpath = "/home/anupa/Projects/msr24/uec-experiments/imc/contracts/parking_lot/max-cwnd/xratio-vs-hopcount.csv"
     df = pd.read_csv(fpath)
     #   scheme  hop_count  throughput_ratio
     xl = 'hop_count'
@@ -46,7 +46,8 @@ if __name__ == '__main__':
         ax.grid()
         ax.set_xlabel('Hop count')
         ax.set_ylabel('Throughput ratio')
+        ax.set_ylim(None, 60)
         # ax.set_xscale('log')
         # ax.set_yscale('log')
         fig.tight_layout()
-        fig.savefig(os.path.join(STORAGE_ROOT, 'fit_parking_lot.svg'))
+        fig.savefig(os.path.join(STORAGE_ROOT, 'fit_parking_lot.png'))

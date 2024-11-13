@@ -27,7 +27,7 @@ FUNC_DICT = {
 }
 
 if __name__ == '__main__':
-    fpath = "/home/anupa/Projects/msr24/uec-experiments/imc/contracts/multiflow/0.01bdp/ssqueue-vs-nflows.csv"
+    fpath = "/home/anupa/Projects/msr24/uec-experiments/imc/contracts/multiflow/max-cwnd/ssqueue-vs-nflows.csv"
     df = pd.read_csv(fpath)
     #   scheme  num_flows  avg_queue_bytes  avg_queue_bdp
 
@@ -44,7 +44,8 @@ if __name__ == '__main__':
         ax.grid()
         ax.set_xlabel('Number of Flows')
         ax.set_ylabel('Queue Size [BDP]')
+        ax.set_ylim(None, 10)
         # ax.set_xscale('log')
         # ax.set_yscale('log')
         fig.tight_layout()
-        fig.savefig(os.path.join(STORAGE_ROOT, 'fit_dumbbell.svg'))
+        fig.savefig(os.path.join(STORAGE_ROOT, 'fit_dumbbell.png'))
