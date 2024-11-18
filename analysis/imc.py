@@ -2,6 +2,7 @@ from math import log
 import os
 from typing import Dict, Tuple
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 import pandas as pd
 import scipy
 
@@ -9,7 +10,26 @@ import imc_dumbbell
 import imc_parking_lot
 import imc_jitter
 
+from plot_config_light import get_fig_size_paper, get_style, colors, markers
 
+my_style = get_style(True, True)
+
+
+RENAME = {
+    "sqrt": "$1/\sqrt{s}$",
+    "vegas": "$1/s$",
+    "swift": "$1/s^2$",
+}
+SORT_ORDER = [
+    "sqrt",
+    "vegas",
+    "swift",
+]
+SORT_ORDER_MAP = {k: i for i, k in enumerate(SORT_ORDER)}
+INVERSE_SORT_ORDER_MAP = {i: k for i, k in enumerate(SORT_ORDER)}
+
+
+@mpl.rc_context(my_style)
 def plot_fit(
     df: pd.DataFrame,
     xl: str,
@@ -21,18 +41,40 @@ def plot_fit(
     ylim: Tuple = (None, None),
     loglog: bool = False,
 ):
-    fig, ax = plt.subplots()
-    for scheme, gdf in df.groupby('scheme'):
-        assert isinstance(scheme, str)
+    figsize = get_fig_size_paper(xscale=0.3, yscale=0.3, full=True)
+    fig, ax = plt.subplots(figsize=figsize)
+    i = 0
+    df["scheme_id"] = df["scheme"].map(SORT_ORDER_MAP)
+    df = df.sort_values(["scheme", xl])
+    for scheme_id, gdf in df.groupby('scheme_id'):
+        if xl == "jitter_us" and loglog:
+            gdf = gdf.iloc[1:]
+
+        assert isinstance(scheme_id, int)
+        scheme = INVERSE_SORT_ORDER_MAP[scheme_id]
         func = func_dict[scheme]
         ret = scipy.optimize.curve_fit(func, gdf[xl], gdf[yl])
         print(scheme, ret)
 
-        ax.plot(gdf[xl], gdf[yl], 'X', label=f'{scheme}_data')
-        ax.plot(gdf[xl], func(gdf[xl], *ret[0]), label=f'{scheme}_contract')
+        ax.plot(
+            gdf[xl],
+            func(gdf[xl], *ret[0]),
+            marker='',
+            ls="--",
+            color="grey",
+            label=f"_",
+        )
+        ax.plot(
+            gdf[xl],
+            gdf[yl],
+            ls="None",
+            marker=markers[i],
+            color=colors[i],
+            label=RENAME[scheme],
+        )
+        i += 1
 
     ax.legend()
-    ax.grid()
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if loglog:
@@ -40,8 +82,8 @@ def plot_fit(
         ax.set_yscale('log')
     else:
         ax.set_ylim(ylim)
-    fig.tight_layout()
-    fig.savefig(outpath)
+    fig.tight_layout(pad=0.03)
+    fig.savefig(outpath, pad_inches=0.03)
 
 
 if __name__ == "__main__":
@@ -108,7 +150,7 @@ if __name__ == "__main__":
         "throughput_ratio",
         imc_jitter.FUNC_DICT,
         opath,
-        "Jitter (~ unit of Smin)",
+        "Jitter (~ unit of $S_{min}$)",
         "Throughput ratio",
         (None, 30),
     )
