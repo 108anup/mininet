@@ -110,7 +110,7 @@ if __name__ == "__main__":
         opath,
         "Number of Flows",
         "Queue Size [BDP]",
-        title="Congestion growth",
+        title="Congestion growth (lower better)",
         ylim=(None, 10),
     )
     plot_fit(
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         opath_loglog,
         "Number of Flows",
         "Queue Size [BDP]",
-        title="Congestion growth",
+        title="Congestion growth (lower better)",
         loglog=True,
     )
 
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         opath,
         "Hop count",
         "Throughput ratio",
-        title="Fairness",
+        title="Unfairness (lower better)",
         ylim=(None, 80),
     )
     plot_fit(
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         opath_loglog,
         "Hop count",
         "Throughput ratio",
-        title="Fairness",
+        title="Unfairness (lower better)",
         loglog=True
     )
 
@@ -164,7 +164,7 @@ if __name__ == "__main__":
         opath,
         "Jitter [$\sim S_{min}$]",
         "Throughput ratio",
-        title="Robustness",
+        title="Robustness error (lower better)",
         ylim=(None, 30),
     )
     plot_fit(
@@ -175,6 +175,6 @@ if __name__ == "__main__":
         opath_loglog,
         "Jitter [$\sim S_{min}$]",
         "Throughput ratio",
-        title="Robustness",
+        title="Robustness error (lower better)",
         loglog=True,
     )
