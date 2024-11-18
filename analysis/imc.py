@@ -150,7 +150,7 @@ if __name__ == "__main__":
         "throughput_ratio",
         imc_jitter.FUNC_DICT,
         opath,
-        "Jitter (~ unit of $S_{min}$)",
+        "Jitter [\~$S_{min}$]",
         "Throughput ratio",
         (None, 30),
     )
