@@ -10,10 +10,15 @@ import imc_dumbbell
 import imc_parking_lot
 import imc_jitter
 
+
+from plot_config.figure_type_creator import FigureTypeCreator
+ftc = FigureTypeCreator(pub_type='paper', paper_use_small_font=True)
+paper = ftc.get_figure_type()
+
+
 from plot_config_light import get_fig_size_paper, get_style, colors, markers
 
-my_style = get_style(True, True)
-
+my_style = get_style(True, True, True)
 
 RENAME = {
     "sqrt": "$1/\sqrt{s}$",
@@ -38,11 +43,13 @@ def plot_fit(
     outpath: str,
     xlabel: str,
     ylabel: str,
+    title: str = None,
     ylim: Tuple = (None, None),
     loglog: bool = False,
 ):
     figsize = get_fig_size_paper(xscale=0.3, yscale=0.3, full=True)
     fig, ax = plt.subplots(figsize=figsize)
+    # fig, ax = paper.subfigures(xscale=0.5, yscale=0.5)
     i = 0
     df["scheme_id"] = df["scheme"].map(SORT_ORDER_MAP)
     df = df.sort_values(["scheme", xl])
@@ -74,6 +81,7 @@ def plot_fit(
         )
         i += 1
 
+    ax.set_title(title)
     ax.legend()
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -102,7 +110,8 @@ if __name__ == "__main__":
         opath,
         "Number of Flows",
         "Queue Size [BDP]",
-        (None, 10),
+        title="Congestion growth",
+        ylim=(None, 10),
     )
     plot_fit(
         df,
@@ -112,6 +121,7 @@ if __name__ == "__main__":
         opath_loglog,
         "Number of Flows",
         "Queue Size [BDP]",
+        title="Congestion growth",
         loglog=True,
     )
 
@@ -127,7 +137,8 @@ if __name__ == "__main__":
         opath,
         "Hop count",
         "Throughput ratio",
-        (None, 70),
+        title="Fairness",
+        ylim=(None, 80),
     )
     plot_fit(
         df,
@@ -137,6 +148,7 @@ if __name__ == "__main__":
         opath_loglog,
         "Hop count",
         "Throughput ratio",
+        title="Fairness",
         loglog=True
     )
 
@@ -150,9 +162,10 @@ if __name__ == "__main__":
         "throughput_ratio",
         imc_jitter.FUNC_DICT,
         opath,
-        "Jitter [\~$S_{min}$]",
+        "Jitter [$\sim S_{min}$]",
         "Throughput ratio",
-        (None, 30),
+        title="Robustness",
+        ylim=(None, 30),
     )
     plot_fit(
         df,
@@ -160,7 +173,8 @@ if __name__ == "__main__":
         "throughput_ratio",
         imc_jitter.FUNC_DICT,
         opath_loglog,
-        "Jitter (~ unit of Smin)",
+        "Jitter [$\sim S_{min}$]",
         "Throughput ratio",
+        title="Robustness",
         loglog=True,
     )

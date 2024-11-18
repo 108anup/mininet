@@ -71,29 +71,27 @@ marker_map = {colors[i]: marker for i,
 ls_map = {colors[i]: ls for i, ls in enumerate(linestyles)}
 
 
+BIG_SIZE=7.0  # 8.0
+SMALL_SIZE=6.0  # 7.0
 PAPER_STYLE = {
     "figure.dpi": 600,
     "font.family": "sans-serif",
-    "font.sans-serif": [
-        "Arial",
-        "Source Sans 3",
-        "Aptos",
-        "Tahoma",
-        "Computer Modern",
-        "DejaVu Sans",
-        "Helvetica",
-        "Lucida Grande",
-        "Verdana",
-    ],
-    "font.size": 8.0,
-    "axes.labelsize": 8.0,
-    "legend.fontsize": 7.0,
-    "xtick.labelsize": 7.0,
-    "ytick.labelsize": 7.0,
-    "pgf.texsystem": "pdflatex",
-    "text.usetex": True,
-    "pgf.preamble": "\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\usepackage{usenix}",
-    "text.latex.preamble": "\\usepackage[cm]{sfmath}\n\\usepackage{amsmath}",
+    # "font.sans-serif": [
+    #     "Arial",
+    #     "Source Sans 3",
+    #     "Aptos",
+    #     "Tahoma",
+    #     "Computer Modern",
+    #     "DejaVu Sans",
+    #     "Helvetica",
+    #     "Lucida Grande",
+    #     "Verdana",
+    # ],
+    "font.size": BIG_SIZE,
+    "axes.labelsize": BIG_SIZE,
+    "legend.fontsize": SMALL_SIZE,
+    "xtick.labelsize": SMALL_SIZE,
+    "ytick.labelsize": SMALL_SIZE,
     "pdf.fonttype": 42,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
@@ -110,8 +108,8 @@ PAPER_STYLE = {
     "legend.handlelength": 2.5,
     "hatch.linewidth": 0.5,
     "grid.linewidth": 0.25,
-    "axes.titlesize": 8.0,
-    "legend.title_fontsize": 8.0,
+    "axes.titlesize": BIG_SIZE,
+    "legend.title_fontsize": BIG_SIZE,
 }
 
 PPT_STYLE = {
@@ -145,8 +143,15 @@ PPT_STYLE = {
     "legend.title_fontsize": 24,
 }
 
+USE_TEX = {
+    "pgf.texsystem": "pdflatex",
+    "text.usetex": True,
+    "pgf.preamble": "\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\usepackage{usenix}",
+    "text.latex.preamble": "\\usepackage[cm]{sfmath}\n\\usepackage{amsmath}",
+}
 
-def get_style(use_markers=False, paper=True):
+
+def get_style(use_markers=False, paper=True, use_tex=False):
     cycling = (cycler('color', colors)
                 + cycler('ls', linestyles))
     if use_markers:
@@ -155,5 +160,7 @@ def get_style(use_markers=False, paper=True):
     ret = PPT_STYLE.copy()
     if paper:
         ret = PAPER_STYLE.copy()
+    if use_tex:
+        ret.update(USE_TEX)
     ret['axes.prop_cycle'] = cycling
     return ret

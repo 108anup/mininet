@@ -1,0 +1,3 @@
+[submodule "external/plot_config"]
+	path = external/plot_config
+	url = git@github.com:108anup/plot_config.git
