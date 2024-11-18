@@ -1,87 +1,124 @@
-# Convert below to csv format:
-import math
+from math import log
 import os
+from typing import Dict, Tuple
 from matplotlib import pyplot as plt
-import numpy as np
 import pandas as pd
 import scipy
 
-
-STORAGE_ROOT = '/home/anupa/Projects/Verification/CCmatic-empirical/experiments/figs/mininet'
-
-outputs = ["""
-simplified_swift          2     23052.148438
-simplified_swift          3     31665.156250
-simplified_swift          4     39794.218750
-simplified_swift          5     46762.421875
-simplified_swift          6     49713.151042
-simplified_swift          7     54294.877232
-simplified_swift          8     58693.730469
-simplified_swift          9     63950.069444
-simplified_swift         10     67895.343750
-simplified_swift         11     72168.650568
-simplified_swift         12     76950.520833
-simplified_swift         13     80175.078125
-simplified_swift         14     82892.483259
-simplified_swift         15     85980.104167
-simplified_swift         16     89422.416992
-""",
-"""
-simplified_vegas          2      9376.757812
-simplified_vegas          3     14884.322917
-simplified_vegas          4     18761.894531
-simplified_vegas          5     22858.671875
-simplified_vegas          6     27134.960938
-simplified_vegas          7     31159.229911
-simplified_vegas          8     35204.482422
-simplified_vegas          9     39716.128472
-simplified_vegas         10     44608.484375
-simplified_vegas         11     49582.627841
-simplified_vegas         12     54001.881510
-simplified_vegas         13     57809.062500
-simplified_vegas         14     60879.681920
-simplified_vegas         15     65770.182292
-simplified_vegas         16     73273.662109
-"""]
-
-dfs = []
-for output in outputs:
-    df_recs = []
-    records = output.split('\n')
-    for record in records:
-        if record == '':
-            continue
-        split = record.split()
-        df_recs.append({
-            'cca': split[0],
-            'n_flows': int(split[1]),
-            'queue_bytes': float(split[2]),
-        })
-    df = pd.DataFrame(df_recs)
-    dfs.append(df)
+import imc_dumbbell
+import imc_parking_lot
+import imc_jitter
 
 
-def func_swift(x, a):
-    return a * np.sqrt(x)
+def plot_fit(
+    df: pd.DataFrame,
+    xl: str,
+    yl: str,
+    func_dict: Dict,
+    outpath: str,
+    xlabel: str,
+    ylabel: str,
+    ylim: Tuple = (None, None),
+    loglog: bool = False,
+):
+    fig, ax = plt.subplots()
+    for scheme, gdf in df.groupby('scheme'):
+        assert isinstance(scheme, str)
+        func = func_dict[scheme]
+        ret = scipy.optimize.curve_fit(func, gdf[xl], gdf[yl])
+        print(scheme, ret)
 
+        ax.plot(gdf[xl], gdf[yl], 'X', label=f'{scheme}_data')
+        ax.plot(gdf[xl], func(gdf[xl], *ret[0]), label=f'{scheme}_contract')
 
-def func_vegas(x, a):
-    return a * x
-
-
-fig, ax = plt.subplots()
-for df in dfs:
-    cca = df['cca'].iloc[0]
-
-    func = func_swift if cca == 'simplified_swift' else func_vegas
-    ret = scipy.optimize.curve_fit(func, df['n_flows'], df['queue_bytes'])
-    print(cca, ret)
-
-    ax.plot(df['n_flows'], df['queue_bytes'], 'X', label=f'{cca}_data')
-    ax.plot(df['n_flows'], func(df['n_flows'], *ret[0]), label=f'{cca}_contract')
     ax.legend()
     ax.grid()
-    ax.set_xlabel('Number of Flows')
-    ax.set_ylabel('Queue Size [bytes]')
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if loglog:
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+    else:
+        ax.set_ylim(ylim)
     fig.tight_layout()
-    fig.savefig(os.path.join(STORAGE_ROOT, 'fit.svg'))
+    fig.savefig(outpath)
+
+
+if __name__ == "__main__":
+    BASE_INPUT_PATH = "/home/anupa/Projects/msr24/uec-experiments/imc/contracts/"
+    BASE_OUTPUT_PATH = '/home/anupa/Projects/Verification/CCmatic-empirical/experiments/figs/mininet'
+
+    fpath = os.path.join(BASE_INPUT_PATH, "multiflow/max-cwnd/ssqueue-vs-nflows.csv")
+    df = pd.read_csv(fpath)
+    opath = os.path.join(BASE_OUTPUT_PATH, 'fit_dumbbell.pdf')
+    opath_loglog = os.path.join(BASE_OUTPUT_PATH, 'fit_dumbbell_loglog.pdf')
+    plot_fit(
+        df,
+        "num_flows",
+        "avg_queue_bdp",
+        imc_dumbbell.FUNC_DICT,
+        opath,
+        "Number of Flows",
+        "Queue Size [BDP]",
+        (None, 10),
+    )
+    plot_fit(
+        df,
+        "num_flows",
+        "avg_queue_bdp",
+        imc_dumbbell.FUNC_DICT,
+        opath_loglog,
+        "Number of Flows",
+        "Queue Size [BDP]",
+        loglog=True,
+    )
+
+    fpath = os.path.join(BASE_INPUT_PATH, "parking_lot/max-cwnd/xratio-vs-hopcount.csv")
+    df = pd.read_csv(fpath)
+    opath = os.path.join(BASE_OUTPUT_PATH, 'fit_parkinglot.pdf')
+    opath_loglog = os.path.join(BASE_OUTPUT_PATH, 'fit_parkinglot_loglog.pdf')
+    plot_fit(
+        df,
+        "hop_count",
+        "throughput_ratio",
+        imc_parking_lot.FUNC_DICT,
+        opath,
+        "Hop count",
+        "Throughput ratio",
+        (None, 70),
+    )
+    plot_fit(
+        df,
+        "hop_count",
+        "throughput_ratio",
+        imc_parking_lot.FUNC_DICT,
+        opath_loglog,
+        "Hop count",
+        "Throughput ratio",
+        loglog=True
+    )
+
+    fpath = os.path.join(BASE_INPUT_PATH, "jitter/first/xratio-vs-jitter.csv")
+    df = pd.read_csv(fpath)
+    opath = os.path.join(BASE_OUTPUT_PATH, 'fit_jitter.pdf')
+    opath_loglog = os.path.join(BASE_OUTPUT_PATH, 'fit_jitter_loglog.pdf')
+    plot_fit(
+        df,
+        "jitter_us",
+        "throughput_ratio",
+        imc_jitter.FUNC_DICT,
+        opath,
+        "Jitter (~ unit of Smin)",
+        "Throughput ratio",
+        (None, 30),
+    )
+    plot_fit(
+        df,
+        "jitter_us",
+        "throughput_ratio",
+        imc_jitter.FUNC_DICT,
+        opath_loglog,
+        "Jitter (~ unit of Smin)",
+        "Throughput ratio",
+        loglog=True,
+    )

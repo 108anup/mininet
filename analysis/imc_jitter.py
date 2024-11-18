@@ -8,16 +8,16 @@ from matplotlib import pyplot as plt
 STORAGE_ROOT = '/home/anupa/Projects/Verification/CCmatic-empirical/experiments/figs/mininet'
 
 
-def func_sqrt(x, a):
-    return a * np.sqrt(x)
+def func_sqrt(x, a, b):
+    return np.sqrt(a * x + b)
 
 
-def func_swift(x, a):
-    return a * np.power(x, 2)
+def func_swift(x, a, b):
+    return np.power(a * x + b, 2)
 
 
-def func_vegas(x, a):
-    return a * x
+def func_vegas(x, a, b):
+    return a * x + b
 
 
 FUNC_DICT = {
@@ -27,14 +27,17 @@ FUNC_DICT = {
 }
 
 if __name__ == '__main__':
-    fpath = "/home/anupa/Projects/msr24/uec-experiments/imc/contracts/parking_lot/max-cwnd/xratio-vs-hopcount.csv"
+    fpath = "/home/anupa/Projects/msr24/uec-experiments/imc/contracts/jitter/first/xratio-vs-jitter.csv"
     df = pd.read_csv(fpath)
-    #   scheme  hop_count  throughput_ratio
-    xl = 'hop_count'
+    #   scheme  jitter_us  throughput_ratio
+
+    xl = 'jitter_us'
     yl = 'throughput_ratio'
 
     fig, ax = plt.subplots()
-    for scheme, gdf in df.groupby('scheme'):
+    for scheme, _gdf in df.groupby('scheme'):
+        gdf = _gdf.sort_values(xl).iloc[1:]
+        # gdf = _gdf
         assert isinstance(scheme, str)
         func = FUNC_DICT[scheme]
         ret = scipy.optimize.curve_fit(func, gdf[xl], gdf[yl])
@@ -44,10 +47,11 @@ if __name__ == '__main__':
         ax.plot(gdf[xl], func(gdf[xl], *ret[0]), label=f'{scheme}_contract')
     ax.legend()
     ax.grid()
-    ax.set_xlabel('Hop count')
+    ax.set_xlabel('Jitter (roughly in units of Smin)')
     ax.set_ylabel('Throughput ratio')
-    ax.set_ylim(None, 70)
+    ax.set_ylim(None, 30)
     # ax.set_xscale('log')
     # ax.set_yscale('log')
     fig.tight_layout()
-    fig.savefig(os.path.join(STORAGE_ROOT, 'fit_parking_lot.png'))
+    fig.savefig(os.path.join(STORAGE_ROOT, 'fit_jitter.png'))
+
