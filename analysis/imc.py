@@ -47,7 +47,7 @@ def plot_fit(
     ylim: Tuple = (None, None),
     loglog: bool = False,
 ):
-    figsize = get_fig_size_paper(xscale=0.3, yscale=0.3, full=True)
+    figsize = get_fig_size_paper(xscale=0.32, yscale=0.32, full=True)
     fig, ax = plt.subplots(figsize=figsize)
     # fig, ax = paper.subfigures(xscale=0.5, yscale=0.5)
     i = 0
@@ -110,8 +110,8 @@ if __name__ == "__main__":
         opath,
         "Number of Flows",
         "Queue Size [BDP]",
-        title="Congestion growth (lower better)",
-        ylim=(None, 10),
+        title="Congestion growth (lower is better)",
+        ylim=(None, 12.5),
     )
     plot_fit(
         df,
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         opath_loglog,
         "Number of Flows",
         "Queue Size [BDP]",
-        title="Congestion growth (lower better)",
+        title="Congestion growth (lower is better)",
         loglog=True,
     )
 
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         opath,
         "Hop count",
         "Throughput ratio",
-        title="Unfairness (lower better)",
+        title="Unfairness (lower is better)",
         ylim=(None, 80),
     )
     plot_fit(
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         opath_loglog,
         "Hop count",
         "Throughput ratio",
-        title="Unfairness (lower better)",
+        title="Unfairness (lower is better)",
         loglog=True
     )
 
@@ -164,7 +164,7 @@ if __name__ == "__main__":
         opath,
         "Jitter [$\sim S_{min}$]",
         "Throughput ratio",
-        title="Robustness error (lower better)",
+        title="Robustness error (lower is better)",
         ylim=(None, 30),
     )
     plot_fit(
@@ -175,6 +175,6 @@ if __name__ == "__main__":
         opath_loglog,
         "Jitter [$\sim S_{min}$]",
         "Throughput ratio",
-        title="Robustness error (lower better)",
+        title="Robustness error (lower is better)",
         loglog=True,
     )
