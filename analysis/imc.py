@@ -20,19 +20,25 @@ from plot_config_light import get_fig_size_paper, get_style, colors, markers
 
 my_style = get_style(True, True, True)
 
+EXT = ".pdf"
+
 RENAME = {
     "sqrt": "$1/\sqrt{s}$",
+    "vanilla_vegas": "vegas",
     "vegas": "$1/s$",
+    "vanilla_swift": "swift",
     "swift": "$1/s^2$",
 }
 SORT_ORDER = [
     "sqrt",
     "vegas",
+    "vanilla_vegas",
     "swift",
+    "vanilla_swift",
 ]
+SORT_ORDER = SORT_ORDER[::-1]
 SORT_ORDER_MAP = {k: i for i, k in enumerate(SORT_ORDER)}
 INVERSE_SORT_ORDER_MAP = {i: k for i, k in enumerate(SORT_ORDER)}
-
 
 @mpl.rc_context(my_style)
 def plot_fit(
@@ -46,6 +52,7 @@ def plot_fit(
     title: str = None,
     ylim: Tuple = (None, None),
     loglog: bool = False,
+    legend=False,
 ):
     figsize = get_fig_size_paper(xscale=0.32, yscale=0.32, full=True)
     fig, ax = plt.subplots(figsize=figsize)
@@ -59,18 +66,20 @@ def plot_fit(
 
         assert isinstance(scheme_id, int)
         scheme = INVERSE_SORT_ORDER_MAP[scheme_id]
-        func = func_dict[scheme]
-        ret = scipy.optimize.curve_fit(func, gdf[xl], gdf[yl])
-        print(scheme, ret)
 
-        ax.plot(
-            gdf[xl],
-            func(gdf[xl], *ret[0]),
-            marker='',
-            ls="--",
-            color="grey",
-            label=f"_",
-        )
+        if scheme in func_dict:
+            func = func_dict[scheme]
+            ret = scipy.optimize.curve_fit(func, gdf[xl], gdf[yl])
+            print(scheme, ret)
+
+            ax.plot(
+                gdf[xl],
+                func(gdf[xl], *ret[0]),
+                marker='',
+                ls="--",
+                color="grey",
+                label=f"_",
+            )
         ax.plot(
             gdf[xl],
             gdf[yl],
@@ -78,11 +87,14 @@ def plot_fit(
             marker=markers[i],
             color=colors[i],
             label=RENAME[scheme],
+            alpha=0.8,
         )
         i += 1
 
     ax.set_title(title)
-    ax.legend()
+    if legend:
+        ax.legend()
+        # ax.legend(ncol=2)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if loglog:
@@ -96,12 +108,16 @@ def plot_fit(
 
 if __name__ == "__main__":
     BASE_INPUT_PATH = "/home/anupa/Projects/msr24/uec-experiments/imc/contracts/"
-    BASE_OUTPUT_PATH = '/home/anupa/Projects/Verification/CCmatic-empirical/experiments/figs/mininet'
+    BASE_OUTPUT_PATH = '/home/anupa/Projects/Verification/CCmatic-empirical/experiments/figs/mininet/vanilla'
+    os.makedirs(BASE_OUTPUT_PATH, exist_ok=True)
 
     fpath = os.path.join(BASE_INPUT_PATH, "multiflow/max-cwnd/ssqueue-vs-nflows.csv")
     df = pd.read_csv(fpath)
-    opath = os.path.join(BASE_OUTPUT_PATH, 'fit_dumbbell.pdf')
-    opath_loglog = os.path.join(BASE_OUTPUT_PATH, 'fit_dumbbell_loglog.pdf')
+    fpath = os.path.join(BASE_INPUT_PATH, "vanilla-damp/multiflow/ssqueue-vs-nflows.csv")
+    df2 = pd.read_csv(fpath)
+    df = pd.concat([df, df2])
+    opath = os.path.join(BASE_OUTPUT_PATH, f'fit_dumbbell{EXT}')
+    opath_loglog = os.path.join(BASE_OUTPUT_PATH, f'fit_dumbbell_loglog{EXT}')
     plot_fit(
         df,
         "num_flows",
@@ -127,8 +143,11 @@ if __name__ == "__main__":
 
     fpath = os.path.join(BASE_INPUT_PATH, "parking_lot/max-cwnd/xratio-vs-hopcount.csv")
     df = pd.read_csv(fpath)
-    opath = os.path.join(BASE_OUTPUT_PATH, 'fit_parkinglot.pdf')
-    opath_loglog = os.path.join(BASE_OUTPUT_PATH, 'fit_parkinglot_loglog.pdf')
+    fpath = os.path.join(BASE_INPUT_PATH, "vanilla-damp/parking_lot/xratio-vs-hopcount.csv")
+    df2 = pd.read_csv(fpath)
+    df = pd.concat([df, df2])
+    opath = os.path.join(BASE_OUTPUT_PATH, f'fit_parkinglot{EXT}')
+    opath_loglog = os.path.join(BASE_OUTPUT_PATH, f'fit_parkinglot_loglog{EXT}')
     plot_fit(
         df,
         "hop_count",
@@ -139,6 +158,7 @@ if __name__ == "__main__":
         "Throughput ratio",
         title="Unfairness (lower is better)",
         ylim=(None, 80),
+        legend=True,
     )
     plot_fit(
         df,
@@ -149,13 +169,17 @@ if __name__ == "__main__":
         "Hop count",
         "Throughput ratio",
         title="Unfairness (lower is better)",
-        loglog=True
+        loglog=True,
+        legend=True,
     )
 
     fpath = os.path.join(BASE_INPUT_PATH, "jitter/first/xratio-vs-jitter.csv")
     df = pd.read_csv(fpath)
-    opath = os.path.join(BASE_OUTPUT_PATH, 'fit_jitter.pdf')
-    opath_loglog = os.path.join(BASE_OUTPUT_PATH, 'fit_jitter_loglog.pdf')
+    fpath = os.path.join(BASE_INPUT_PATH, "vanilla-damp/jitter/xratio-vs-jitter.csv")
+    df2 = pd.read_csv(fpath)
+    df = pd.concat([df, df2])
+    opath = os.path.join(BASE_OUTPUT_PATH, f'fit_jitter{EXT}')
+    opath_loglog = os.path.join(BASE_OUTPUT_PATH, f'fit_jitter_loglog{EXT}')
     plot_fit(
         df,
         "jitter_us",
