@@ -21,7 +21,7 @@ from mininet.topo import Topo
 flush = sys.stdout.flush
 
 INTER_POLL_TIME = 1e-1  # seconds
-DURATION = 60
+DURATION = 300  # seconds
 LIVELOG_ROOT = '/home/mininet/P/logs/'
 STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/parking_lot'
 PKT_SIZE_BYTES = 1500
@@ -106,7 +106,7 @@ def run_iperf_test(
             cc_params = ""
             if short_cca == 'markovian':
                 # cc_params = "delta_conf=do_ss:auto:0.5"
-                cc_params = "delta_conf=do_ss:constant_delta:0.5"
+                cc_params = "delta_conf=do_ss:constant_delta:0.1"
 
             receiver.sendCmd(f'{GENERICCC_PATH}/receiver 5001')
             sender_log = os.path.join(LIVELOG_ROOT, f'[sender={sender}].txt')
@@ -262,10 +262,10 @@ if __name__ == '__main__':
     args = parse_args()
     STORAGE_ROOT = args.output
     hops = 3
-    bw_mbps = 500
-    delay_ms = 1  # one way
+    bw_mbps = 24
+    delay_ms = 25  # one way
     cca = 'cubic'
-    queue_size_bdp = 1
+    queue_size_bdp = 100
 
     INTER_POLL_TIME = max(INTER_POLL_TIME, delay_ms / 1e3)
     setLogLevel('info')
@@ -273,9 +273,9 @@ if __name__ == '__main__':
     records = []
     # for hops in [3]:
     # for cca in ["reno", "cubic", "genericcc_markovian", "vegas"]:
-    for cca in ["genericcc_markovian"]:
-        for hops in [5]:
-        # for hops in range(9, 11):
+    for cca in ["ndd"]:
+        # for hops in [5]:
+        for hops in range(1, 9):
             ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
             records.append({
                 'hops': hops,

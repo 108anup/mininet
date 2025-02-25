@@ -41,7 +41,8 @@ def get_steady_state_bps(df: pd.DataFrame):
     time,bytes,packets,drops,overlimits,requeues,backlog,qlen
     """
     # Get average throughput in seconds 25 to 50
-    fdf = df[(df['time'] >= 25) & (df['time'] <= 50)]
+    (start, end) = (240, 300)
+    fdf = df[(df['time'] >= start) & (df['time'] <= end)]
     send_bytes = fdf['bytes'].iloc[-1] - fdf['bytes'].iloc[0]
     send_time = fdf['time'].iloc[-1] - fdf['time'].iloc[0]
     return send_bytes * 8 / send_time

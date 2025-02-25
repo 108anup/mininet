@@ -531,6 +531,7 @@ def fixLimits():
         sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
         # Increase number of PTYs for nodes
         sysctlTestAndSet( 'kernel.pty.max', 20000 )
+        sysctlTestAndSet( 'kernel.dmesg_restrict', 0 )
     # pylint: disable=broad-except
     except Exception:
         warn( "*** Error setting resource limits. "
