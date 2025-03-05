@@ -63,31 +63,34 @@ def plot_single_exp(input_file, output_dir):
     fname = os.path.basename(input_file).replace('.csv', '')
     df, ddf = parse_tc_df(input_file)
 
+    if "switch" in fname:
+        plot_df(
+            df, 'backlog', os.path.join(output_dir, f'{fname}-queue.svg'),
+            xkey='time', xlabel='Time (s)', ylabel='Queue [bytes]',
+        )
+    else:
+        plot_df(
+            ddf, 'send_rate_mbps', os.path.join(output_dir, f'{fname}-send-rate.svg'),
+            xkey='time', xlabel='Time (s)', ylabel='Sent Rate [Mbps]',
+        )
+
     # plot_df(
     #     df, 'bytes', os.path.join(output_dir, f'{fname}-sent.svg'),
     #     xkey='time', xlabel='Time (s)', ylabel='Sent [bytes]',
     # )
-    plot_df(
-        df, 'qlen', os.path.join(output_dir, f'{fname}-queue.svg'),
-        xkey='time', xlabel='Time (s)', ylabel='Queue [pkts]',
-    )
     # plot_df(
     #     df, 'drops', os.path.join(output_dir, f'{fname}-loss.svg'),
     #     xkey='time', xlabel='Time (s)', ylabel='Drops [pkts]',
     # )
-
-    plot_df(
-        ddf, 'send_rate_mbps', os.path.join(output_dir, f'{fname}-send-rate.svg'),
-        xkey='time', xlabel='Time (s)', ylabel='Sent Rate [Mbps]',
-    )
-    plot_df(
-        ddf, 'loss_prob', os.path.join(output_dir, f'{fname}-loss-prob.svg'),
-        xkey='time', xlabel='Time (s)', ylabel='Loss Probability',
-    )
+    # plot_df(
+    #     ddf, 'loss_prob', os.path.join(output_dir, f'{fname}-loss-prob.svg'),
+    #     xkey='time', xlabel='Time (s)', ylabel='Loss Probability',
+    # )
     # plot_df(
     #     ddf, 'drops_diff', os.path.join(output_dir, f'{fname}-loss.svg'),
     #     xkey='time', xlabel='Time (s)', ylabel='Drops [pkts]',
     # )
+
 
 
 def summarize_parking_lot(input_dir, output_dir):
