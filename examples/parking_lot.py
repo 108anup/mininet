@@ -92,6 +92,17 @@ def run_iperf_test(
     assert len(senders) == len(receivers)
     n = len(senders)
 
+    if "ndd" in cca:
+        lname, llpath = get_livelog_name_path(senders[0], receivers[0])
+        dlog, dlpath = lname.replace(".json", ".dmesg"), llpath.replace(
+            ".json", ".dmesg"
+        )
+        if os.path.exists(dlpath):
+            os.remove(dlpath)
+
+        senders[0].cmd("sudo dmesg --clear")
+        senders[0].cmd(f"dmesg --level info --follow --notime 1> {dlpath} 2>&1 &")
+
     info('*** Starting iperf3 test\n')
     for i in range(n):
         sender = senders[i]
@@ -192,6 +203,14 @@ def run_iperf_test(
             slpath = os.path.join(experiment_path, lname)
             shutil.copy(llpath, slpath)
 
+    if "ndd" in cca:
+        senders[0].cmd("sudo killall dmesg")
+        lname, llpath = get_livelog_name_path(senders[0], receivers[0])
+        dlog, dlpath = lname.replace(".json", ".dmesg"), llpath.replace(
+            ".json", ".dmesg"
+        )
+        shutil.copy(dlpath, os.path.join(experiment_path, dlog))
+
     # TC logs (100ms)
     for loggable in loggables:
         lpath = os.path.join(experiment_path, os.path.basename(loggable.logfile))
@@ -262,8 +281,8 @@ if __name__ == '__main__':
     args = parse_args()
     STORAGE_ROOT = args.output
     hops = 3
-    bw_mbps = 24
-    delay_ms = 25  # one way
+    bw_mbps = 100
+    delay_ms = 5  # one way
     cca = 'cubic'
     queue_size_bdp = 100
 
@@ -273,7 +292,7 @@ if __name__ == '__main__':
     records = []
     # for hops in [3]:
     # for cca in ["reno", "cubic", "genericcc_markovian", "vegas"]:
-    for cca in ["ndd"]:
+    for cca in ["ndd", "bbr", "reno", "cubic"]:
         # for hops in [5]:
         for hops in range(1, 9):
             ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
