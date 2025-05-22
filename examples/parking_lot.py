@@ -21,16 +21,17 @@ from mininet.topo import Topo
 flush = sys.stdout.flush
 
 INTER_POLL_TIME = 1e-1  # seconds
-DURATION = 300  # seconds
+DURATION = 30  # seconds
 LIVELOG_ROOT = '/home/mininet/P/logs/'
 STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/parking_lot'
 PKT_SIZE_BYTES = 1500
 TC_RECORD_HEADER = f"time,bytes,packets,drops,overlimits,requeues,backlog,qlen\n"
 GENERICCC_PATH = '/home/mininet/P/genericCC'
+ASTRAEA_PATH = '/home/mininet/P/contracts/astraea-open-source'
 
 
 def get_queue_size_pkts(bw_mbps: float, delay_ms: float, queue_size_bdp: float) -> int:
-    bdp_bytes = bw_mbps * delay_ms * 1e3 / 8
+    bdp_bytes = 2 * bw_mbps * delay_ms * 1e3 / 8
     queue_size = math.ceil(queue_size_bdp * bdp_bytes / PKT_SIZE_BYTES)
     return queue_size
 
@@ -91,6 +92,7 @@ def run_iperf_test(
 ):
     assert len(senders) == len(receivers)
     n = len(senders)
+    os.makedirs(LIVELOG_ROOT, exist_ok=True)
 
     if "ndd" in cca:
         lname, llpath = get_livelog_name_path(senders[0], receivers[0])
@@ -131,12 +133,23 @@ def run_iperf_test(
                 f"traffic_params=deterministic,num_cycles=1 > {sender_log} 2>&1 "
             )
 
+        elif "astraea" in cca:
+            receiver.sendCmd(f"{ASTRAEA_PATH}/src/build/bin/server --port=5001")
+            cmd = f"{ASTRAEA_PATH}/src/build/bin/client_eval --ip={receiver.IP()} \
+                  --port=5001 \
+                  --cong=astraea \
+                  --interval=30 \
+                  --pyhelper={ASTRAEA_PATH}/python/infer.py \
+                  --model={ASTRAEA_PATH}/models/py/ > astraea_sender.log 2>&1"
+            sender.sendCmd(f"{cmd}")
+
         else:
             receiver.sendCmd(f'iperf3 -s -p 5001 > /dev/null')
             sender.sendCmd(
                 f"iperf3 -c {receiver.IP()} -p 5001 -t {DURATION}"
                 f" --congestion {cca} --json --logfile {llpath}"
             )
+        # time.sleep(5)
 
     @dataclass
     class TcLogNode:
@@ -185,6 +198,8 @@ def run_iperf_test(
 
     # Wait for all iperf3 to finish
     for sender in senders:
+        if cca == "astraea":
+            sender.sendInt()
         sender.waitOutput()
     for reciever in receivers:
         # reciever.sendCmd('killall iperf3')
@@ -194,7 +209,7 @@ def run_iperf_test(
     # Copy all logs to storage
     os.makedirs(experiment_path, exist_ok=True)
 
-    if "genericcc_" not in cca:
+    if "genericcc_" not in cca and cca not in ["astraea"]:
         # iperf json logs (1s)
         for i in range(n):
             sender = senders[i]
@@ -245,7 +260,7 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
 
     # Quick printing of result
     ratio = 1.0
-    if "genericcc_" not in cca:
+    if "genericcc_" not in cca and cca not in ["astraea"]:
         throughputs = []
         for h in range(hops+1):
             sender = senders[h]
@@ -261,7 +276,8 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
                 throughputs.append(throughput)
 
         ratio = throughputs[-1]/throughputs[0]
-        info(f"*** Parking log experiment result: Hops={hops}, Ratio={ratio:.2f}\n")
+
+    info(f"*** Parking log experiment result: Hops={hops}, Ratio={ratio:.2f}\n")
 
     net.stop()
     return ratio
@@ -280,11 +296,13 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     STORAGE_ROOT = args.output
+
     hops = 3
     bw_mbps = 100
-    delay_ms = 5  # one way
+    delay_ms = 15  # one way
     cca = 'cubic'
     queue_size_bdp = 100
+    # queue_size_bdp = 1
 
     INTER_POLL_TIME = max(INTER_POLL_TIME, delay_ms / 1e3)
     setLogLevel('info')
@@ -292,8 +310,9 @@ if __name__ == '__main__':
     records = []
     # for hops in [3]:
     # for cca in ["reno", "cubic", "genericcc_markovian", "vegas"]:
-    for cca in ["ndd", "bbr", "reno", "cubic"]:
-        # for hops in [5]:
+    # for cca in ["ndd", "bbr", "reno", "cubic"]:
+    for cca in ["astraea"]:
+        # for hops in [2]:
         for hops in range(1, 9):
             ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
             records.append({
