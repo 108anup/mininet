@@ -65,7 +65,7 @@ def dumbbell_test(n_flows: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
     run_iperf_test(net, senders, receivers, switches, cca, experiment_path, 2 * delay_ms)
 
     avg = 0
-    if "genericcc_" not in cca and cca not in ["astraea"]:
+    if "genericcc_" not in cca and cca not in ["astraea", "icc"]:
         throughputs = []
         for h in range(n_flows):
             sender = senders[h]
@@ -108,8 +108,8 @@ if __name__ == '__main__':
 
     records = []
     # for hops in [3]:
-    # for n_flows in range(1, 11):
-    for bw_mbps in range(10, 110, 10):
+    for n_flows in range(1, 11):
+    # for bw_mbps in range(10, 110, 10):
         ratio = dumbbell_test(n_flows, bw_mbps, delay_ms, queue_size_bdp, cca)
         records.append({
             'n_flows': n_flows,

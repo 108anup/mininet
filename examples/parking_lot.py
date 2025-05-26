@@ -27,6 +27,7 @@ STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/parking_lot'
 PKT_SIZE_BYTES = 1500
 TC_RECORD_HEADER = f"time,bytes,packets,drops,overlimits,requeues,backlog,qlen\n"
 GENERICCC_PATH = '/home/mininet/P/genericCC'
+ICC_PATH = '/home/mininet/P/icc'
 ASTRAEA_PATH = '/home/mininet/P/contracts/astraea-open-source'
 
 
@@ -133,6 +134,16 @@ def run_iperf_test(
                 f"traffic_params=deterministic,num_cycles=1 > {sender_log} 2>&1 "
             )
 
+        elif "icc" in cca:
+            receiver.sendCmd(f'{ICC_PATH}/receiver 5001')
+            sender_log = os.path.join(LIVELOG_ROOT, f'[sender={sender}].txt')
+            sender.sendCmd(
+                f"{ICC_PATH}/sender serverip={receiver.IP()} serverport=5001 "
+                f"offduration=0 onduration={int(DURATION*1e3)} "
+                f"cctype=icc lamda_conf=do_ss:compete:auto_theta:auto:1 Bd_conf=10 Rc_conf=30 "
+                f"traffic_params=deterministic,num_cycles=1 > {sender_log} 2>&1 "
+            )
+
         elif "astraea" in cca:
             receiver.sendCmd(f"{ASTRAEA_PATH}/src/build/bin/server --port=5001")
             cmd = f"{ASTRAEA_PATH}/src/build/bin/client_eval --ip={receiver.IP()} \
@@ -140,7 +151,7 @@ def run_iperf_test(
                   --cong=astraea \
                   --interval=30 \
                   --pyhelper={ASTRAEA_PATH}/python/infer.py \
-                  --model={ASTRAEA_PATH}/models/py/ > astraea_sender.log 2>&1"
+                  --model={ASTRAEA_PATH}/models/py/ "
             sender.sendCmd(f"{cmd}")
 
         else:
@@ -209,7 +220,7 @@ def run_iperf_test(
     # Copy all logs to storage
     os.makedirs(experiment_path, exist_ok=True)
 
-    if "genericcc_" not in cca and cca not in ["astraea"]:
+    if "genericcc_" not in cca and cca not in ["astraea", "icc"]:
         # iperf json logs (1s)
         for i in range(n):
             sender = senders[i]
@@ -260,7 +271,7 @@ def parking_lot_test(hops: int, bw_mbps: float, delay_ms: float, queue_size_bdp:
 
     # Quick printing of result
     ratio = 1.0
-    if "genericcc_" not in cca and cca not in ["astraea"]:
+    if "genericcc_" not in cca and cca not in ["astraea", "icc"]:
         throughputs = []
         for h in range(hops+1):
             sender = senders[h]
@@ -298,7 +309,7 @@ if __name__ == '__main__':
     STORAGE_ROOT = args.output
 
     hops = 3
-    bw_mbps = 100
+    bw_mbps = 10
     delay_ms = 15  # one way
     cca = 'cubic'
     queue_size_bdp = 100
@@ -311,9 +322,9 @@ if __name__ == '__main__':
     # for hops in [3]:
     # for cca in ["reno", "cubic", "genericcc_markovian", "vegas"]:
     # for cca in ["ndd", "bbr", "reno", "cubic"]:
-    for cca in ["astraea"]:
-        # for hops in [2]:
-        for hops in range(1, 9):
+    for cca in ["icc"]:
+        for hops in [2]:
+        # for hops in range(1, 9):
             ratio = parking_lot_test(hops, bw_mbps, delay_ms, queue_size_bdp, cca)
             records.append({
                 'hops': hops,
