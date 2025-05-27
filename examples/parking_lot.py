@@ -21,7 +21,7 @@ from mininet.topo import Topo
 flush = sys.stdout.flush
 
 INTER_POLL_TIME = 1e-1  # seconds
-DURATION = 30  # seconds
+DURATION = 60  # seconds
 LIVELOG_ROOT = '/home/mininet/P/logs/'
 STORAGE_ROOT = '/home/mininet/P/CCmatic-experiments/data/mininet/parking_lot'
 PKT_SIZE_BYTES = 1500
