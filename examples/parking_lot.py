@@ -151,7 +151,7 @@ def run_iperf_test(
                   --cong=astraea \
                   --interval=30 \
                   --pyhelper={ASTRAEA_PATH}/python/infer.py \
-                  --model={ASTRAEA_PATH}/models/py/ "
+                --model={ASTRAEA_PATH}/models/py/ > astraea.log 2>&1"
             sender.sendCmd(f"{cmd}")
 
         else:

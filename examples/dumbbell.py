@@ -97,7 +97,7 @@ if __name__ == '__main__':
     args = parse_args()
     STORAGE_ROOT = args.output
 
-    bw_mbps = 10
+    bw_mbps = 100
     delay_ms = 15  # one way
     cca = 'astraea'
     queue_size_bdp = 100
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     # for hops in [3]:
     # for n_flows in range(1, 11):
     # for bw_mbps in range(10, 110, 10):
-    for n_flows in [4]:
+    for n_flows in [2]:
         ratio = dumbbell_test(n_flows, bw_mbps, delay_ms, queue_size_bdp, cca)
         records.append({
             'n_flows': n_flows,
